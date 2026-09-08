@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 180
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Android
         uses: ./.github/actions/setup-android
@@ -35,7 +35,7 @@ jobs:
       # package-jniLibs.sh read, and it keeps the entry small enough to upload; caching
       # all of native/out would include the git checkouts and object trees.
       - name: Cache native prefix
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: native/out/prefix
           key: ffmpeg-${{ hashFiles('third_party/ffmpeg.lock', 'native/scripts/**') }}-ndk-28.2.13676358
@@ -63,7 +63,7 @@ jobs:
         run: ./native/scripts/package-jniLibs.sh
 
       - name: Upload jniLibs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ffmpeg-jniLibs
           path: app/src/main/jniLibs
@@ -71,7 +71,7 @@ jobs:
           retention-days: 14
 
       - name: Upload FFmpeg headers
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ffmpeg-headers
           path: native/prebuilt

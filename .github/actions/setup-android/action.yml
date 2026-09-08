@@ -12,28 +12,28 @@ runs:
         java-version: "17"
 
     - name: Set up Gradle
-      uses: gradle/actions/setup-gradle@v4
+      uses: gradle/actions/setup-gradle@v6
 
     - name: Set up Android SDK
       uses: android-actions/setup-android@v4
+      with:
+        packages: ''
 
     - name: Install NDK and CMake
       shell: bash
       run: |
         yes | sdkmanager --licenses >/dev/null || true
         sdkmanager "ndk;28.2.13676358" "cmake;3.22.1" "platforms;android-36" "platforms;android-37.0" "build-tools;36.0.0"
-        echo "ANDROID_HOME=${ANDROID_SDK_ROOT}" >> "${GITHUB_ENV}"
-        echo "ANDROID_NDK_HOME=${ANDROID_SDK_ROOT}/ndk/28.2.13676358" >> "${GITHUB_ENV}"
-        echo "ANDROID_NDK_ROOT=${ANDROID_SDK_ROOT}/ndk/28.2.13676358" >> "${GITHUB_ENV}"
+        sdk="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+        echo "ANDROID_HOME=${sdk}" >> "${GITHUB_ENV}"
+        echo "ANDROID_SDK_ROOT=${sdk}" >> "${GITHUB_ENV}"
+        echo "ANDROID_NDK_HOME=${sdk}/ndk/28.2.13676358" >> "${GITHUB_ENV}"
+        echo "ANDROID_NDK_ROOT=${sdk}/ndk/28.2.13676358" >> "${GITHUB_ENV}"
 
     - name: Write local.properties
       shell: bash
       run: |
-        sdk="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
-        if [[ -z "${sdk}" ]]; then
-          echo "ANDROID_SDK_ROOT is not set" >&2
-          exit 1
-        fi
+        sdk="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
         {
           printf 'sdk.dir=%s\n' "${sdk}"
           printf 'ndk.dir=%s/ndk/28.2.13676358\n' "${sdk}"
