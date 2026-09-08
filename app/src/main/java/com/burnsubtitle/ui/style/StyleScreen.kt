@@ -51,7 +51,9 @@ fun StyleScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val style = state.style
+    val snackbarHostState = androidx.compose.runtime.remember { androidx.compose.material3.SnackbarHostState() }
     Scaffold(
+        snackbarHost = { androidx.compose.material3.SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.style_title)) },
@@ -185,6 +187,11 @@ fun StyleScreen(
                 value = style.marginPercent.toFloat(),
                 valueRange = SubtitleStyle.MIN_MARGIN_PERCENT.toFloat()..SubtitleStyle.MAX_MARGIN_PERCENT.toFloat(),
                 onValueChange = { viewModel.setMargin(it.toInt()) },
+            )
+            HorizontalDivider()
+            com.burnsubtitle.ui.settings.MaintenanceSection(
+                snackbarHostState = snackbarHostState,
+                renderSnackbarHost = false,
             )
             androidx.compose.foundation.layout.Spacer(
                 modifier = Modifier.padding(bottom = 24.dp),

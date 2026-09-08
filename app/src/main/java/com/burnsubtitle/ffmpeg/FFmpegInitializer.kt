@@ -40,4 +40,9 @@ class FFmpegInitializer @Inject constructor(
         runtime = prepared
         return prepared
     }
+
+    @Synchronized
+    fun reset() {
+        runtime = null
+    }
 }
