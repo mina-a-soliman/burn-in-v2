@@ -1,38 +1,19 @@
 package com.burnsubtitle.data.logging
 
-import android.content.Context
-import com.burnsubtitle.data.pref.AppPreferences
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 import java.io.IOException
-import java.lang.reflect.Proxy
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 class ErrorLoggerTest {
 
-    private val dummyContext = Proxy.newProxyInstance(
-        Context::class.java.classLoader,
-        arrayOf(Context::class.java),
-    ) { _, method, _ ->
-        when (method.name) {
-            "getPackageName" -> "com.burnsubtitle"
-            "getFilesDir" -> File(System.getProperty("java.io.tmpdir", "/tmp"))
-            else -> null
-        }
-    } as Context
-
-    private val dummyPrefs = Proxy.newProxyInstance(
-        AppPreferences::class.java.classLoader,
-        arrayOf(),
-    ) { _, _, _ -> null }
+    private val logger = ErrorLogger()
 
     @Test
     fun fileNameStartsWithPrefixAndFormattedDate() {
-        val logger = ErrorLogger(dummyContext, dummyPrefs as AppPreferences)
         val date = Date(1773000000000L)
         val fileName = logger.generateFileName(date)
 
@@ -45,7 +26,6 @@ class ErrorLoggerTest {
 
     @Test
     fun reportContainsAllExceptionDataAndContext() {
-        val logger = ErrorLogger(dummyContext, dummyPrefs as AppPreferences)
         val testException = IOException("Simulated disk write failure", RuntimeException("Root cause error"))
         val date = Date()
         val extra = mapOf(

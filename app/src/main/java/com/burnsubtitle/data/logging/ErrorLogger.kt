@@ -21,10 +21,18 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class ErrorLogger @Inject constructor(
-    @ApplicationContext private val context: Context,
-    private val preferences: AppPreferences,
+class ErrorLogger(
+    private val context: Context?,
+    private val preferences: AppPreferences?,
 ) {
+    @Inject
+    constructor(
+        @param:ApplicationContext context: Context,
+        preferences: AppPreferences,
+    ) : this(context as Context?, preferences as AppPreferences?)
+
+    internal constructor() : this(null, null)
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     fun log(
@@ -33,7 +41,7 @@ class ErrorLogger @Inject constructor(
         extraDetails: Map<String, Any?>? = null,
     ) {
         runCatching { Log.e(TAG, "[${tag ?: "Error"}] ${error.message}", error) }
-        val folderUri = preferences.getErrorLogsFolderUri() ?: return
+        val folderUri = preferences?.getErrorLogsFolderUri() ?: return
         scope.launch {
             writeLogFile(folderUri, error, tag, extraDetails)
         }
@@ -45,7 +53,7 @@ class ErrorLogger @Inject constructor(
         extraDetails: Map<String, Any?>? = null,
     ): Uri? {
         runCatching { Log.e(TAG, "[${tag ?: "Error"}] ${error.message}", error) }
-        val folderUri = preferences.getErrorLogsFolderUri() ?: return null
+        val folderUri = preferences?.getErrorLogsFolderUri() ?: return null
         return writeLogFile(folderUri, error, tag, extraDetails)
     }
 
@@ -55,6 +63,7 @@ class ErrorLogger @Inject constructor(
         tag: String?,
         extraDetails: Map<String, Any?>?,
     ): Uri? {
+        val resolver = context?.contentResolver ?: return null
         return runCatching {
             val now = Date()
             val fileName = generateFileName(now)
@@ -63,13 +72,13 @@ class ErrorLogger @Inject constructor(
             val docId = DocumentsContract.getTreeDocumentId(treeUri)
             val parentDocUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
             val fileUri = DocumentsContract.createDocument(
-                context.contentResolver,
+                resolver,
                 parentDocUri,
                 "text/plain",
                 fileName,
             ) ?: throw IOException("DocumentsContract failed to create document in $treeUri")
 
-            context.contentResolver.openOutputStream(fileUri)?.use { outStream ->
+            resolver.openOutputStream(fileUri)?.use { outStream ->
                 outStream.bufferedWriter(Charsets.UTF_8).use { writer ->
                     writer.write(content)
                 }
@@ -108,15 +117,16 @@ class ErrorLogger @Inject constructor(
         appendLine("APPLICATION & SYSTEM")
         appendLine("--------------------------------------------------------------------------------")
         val packageInfo = runCatching {
+            val ctx = context ?: return@runCatching null
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                context.packageManager.getPackageInfo(context.packageName, PackageManager.PackageInfoFlags.of(0))
+                ctx.packageManager.getPackageInfo(ctx.packageName, PackageManager.PackageInfoFlags.of(0))
             } else {
                 @Suppress("DEPRECATION")
-                context.packageManager.getPackageInfo(context.packageName, 0)
+                ctx.packageManager.getPackageInfo(ctx.packageName, 0)
             }
         }.getOrNull()
 
-        val packageName = runCatching { context.packageName }.getOrDefault("com.burnsubtitle")
+        val packageName = runCatching { context?.packageName }.getOrNull() ?: "com.burnsubtitle"
         val versionName = packageInfo?.versionName ?: "Unknown"
         val versionCode = runCatching {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -149,7 +159,8 @@ class ErrorLogger @Inject constructor(
         appendLine("JVM Memory:        ${usedRamMb}MB used / ${maxRamMb}MB max")
 
         val filesDirStat = runCatching {
-            val stat = StatFs(context.filesDir.absolutePath)
+            val ctx = context ?: return@runCatching "Unknown"
+            val stat = StatFs(ctx.filesDir.absolutePath)
             val availableBytes = stat.availableBlocksLong * stat.blockSizeLong
             val totalBytes = stat.blockCountLong * stat.blockSizeLong
             "${availableBytes / (1024 * 1024)}MB free / ${totalBytes / (1024 * 1024)}MB total"
