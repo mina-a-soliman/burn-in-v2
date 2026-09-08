@@ -6,7 +6,7 @@ import javax.inject.Inject
 class FFmpegCommandFactory @Inject constructor() {
     fun build(job: BurnJob): List<String> {
         val filter = buildSubtitlesFilter(job)
-        return listOf(
+        val args = mutableListOf(
             "-hide_banner",
             "-nostdin",
             "-y",
@@ -14,29 +14,37 @@ class FFmpegCommandFactory @Inject constructor() {
             "info",
             "-stats_period",
             "0.2",
-            "-i",
-            job.videoCachePath,
-            "-map",
-            "0:v:0",
-            "-map",
-            "0:a?",
-            "-vf",
-            filter,
-            "-c:v",
-            VIDEO_CODEC,
-            "-crf",
-            CRF.toString(),
-            "-preset",
-            PRESET,
-            "-pix_fmt",
-            "yuv420p",
-            "-c:a",
-            "copy",
-            "-sn",
-            "-movflags",
-            "+faststart",
-            job.outputPath,
         )
+        if (job.isAv1) {
+            args.addAll(listOf("-c:v", "av1"))
+        }
+        args.addAll(
+            listOf(
+                "-i",
+                job.videoCachePath,
+                "-map",
+                "0:v:0",
+                "-map",
+                "0:a?",
+                "-vf",
+                filter,
+                "-c:v",
+                VIDEO_CODEC,
+                "-crf",
+                CRF.toString(),
+                "-preset",
+                PRESET,
+                "-pix_fmt",
+                "yuv420p",
+                "-c:a",
+                "copy",
+                "-sn",
+                "-movflags",
+                "+faststart",
+                job.outputPath,
+            ),
+        )
+        return args
     }
 
     fun buildSubtitlesFilter(job: BurnJob): String {

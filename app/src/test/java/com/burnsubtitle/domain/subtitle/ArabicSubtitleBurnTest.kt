@@ -244,5 +244,48 @@ class ArabicSubtitleBurnTest {
 
         val videoLog = "Invalid data found when processing input video.mp4"
         assertEquals(FFmpegFailureReason.INVALID_VIDEO, FFmpegException.Failed.diagnose(videoLog))
+
+        val av1HwaccelLog = """
+            [av1 @ 0x7b1234] Your platform doesn't support hardware accelerated AV1 decoding.
+            [av1 @ 0x7b1234] Failed to get pixel format.
+            [av1 @ 0x7b1234] Get current frame error
+            Function not implemented
+        """.trimIndent()
+        assertEquals(FFmpegFailureReason.CODEC_FAILURE, FFmpegException.Failed.diagnose(av1HwaccelLog))
+    }
+
+    @Test
+    fun test_videoSource_isAv1Detection() {
+        val av1TrackSource = com.burnsubtitle.domain.model.VideoSource(
+            contentUri = "content://media/1",
+            displayName = "test.mp4",
+            durationMs = 5000L,
+            width = 1920,
+            height = 1080,
+            mimeType = "video/mp4",
+            codecMimeType = "video/av01",
+        )
+        assertTrue(av1TrackSource.isAv1)
+
+        val av1ContainerSource = com.burnsubtitle.domain.model.VideoSource(
+            contentUri = "content://media/2",
+            displayName = "test.webm",
+            durationMs = 5000L,
+            width = 1920,
+            height = 1080,
+            mimeType = "video/av01",
+        )
+        assertTrue(av1ContainerSource.isAv1)
+
+        val h264Source = com.burnsubtitle.domain.model.VideoSource(
+            contentUri = "content://media/3",
+            displayName = "test.mp4",
+            durationMs = 5000L,
+            width = 1920,
+            height = 1080,
+            mimeType = "video/mp4",
+            codecMimeType = "video/avc",
+        )
+        assertFalse(h264Source.isAv1)
     }
 }

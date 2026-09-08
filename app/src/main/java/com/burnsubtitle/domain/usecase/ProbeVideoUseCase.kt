@@ -37,17 +37,16 @@ class ProbeVideoUseCase @Inject constructor(
             val rotation = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
                 ?.toIntOrNull()
                 ?: 0
-            val rawSize = probeSize(uri) ?: Pair(
-                retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull() ?: 0,
-                retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: 0,
-            )
-            if (rawSize.first <= 0 || rawSize.second <= 0) {
+            val trackDetails = probeVideoTrack(uri)
+            val rawWidth = trackDetails?.width ?: retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull() ?: 0
+            val rawHeight = trackDetails?.height ?: retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: 0
+            if (rawWidth <= 0 || rawHeight <= 0) {
                 throw FileSelectionException.VideoUnreadable()
             }
             val size = if (rotation == 90 || rotation == 270) {
-                Pair(rawSize.second, rawSize.first)
+                Pair(rawHeight, rawWidth)
             } else {
-                rawSize
+                Pair(rawWidth, rawHeight)
             }
             VideoSource(
                 contentUri = uri.toString(),
@@ -57,13 +56,14 @@ class ProbeVideoUseCase @Inject constructor(
                 height = size.second,
                 mimeType = mime,
                 sizeBytes = sizeBytes,
+                codecMimeType = trackDetails?.codecMime,
             )
         } finally {
             retriever.release()
         }
     }
 
-    private fun probeSize(uri: Uri): Pair<Int, Int>? {
+    private fun probeVideoTrack(uri: Uri): VideoTrackDetails? {
         val extractor = MediaExtractor()
         return try {
             extractor.setDataSource(context, uri, null)
@@ -71,13 +71,20 @@ class ProbeVideoUseCase @Inject constructor(
                 extractor.getTrackFormat(index).getString(MediaFormat.KEY_MIME)?.startsWith("video/") == true
             } ?: return null
             val format = extractor.getTrackFormat(track)
-            val width = format.getInteger(MediaFormat.KEY_WIDTH)
-            val height = format.getInteger(MediaFormat.KEY_HEIGHT)
-            if (width <= 0 || height <= 0) null else Pair(width, height)
+            val width = if (format.containsKey(MediaFormat.KEY_WIDTH)) format.getInteger(MediaFormat.KEY_WIDTH) else 0
+            val height = if (format.containsKey(MediaFormat.KEY_HEIGHT)) format.getInteger(MediaFormat.KEY_HEIGHT) else 0
+            val codecMime = if (format.containsKey(MediaFormat.KEY_MIME)) format.getString(MediaFormat.KEY_MIME) else null
+            if (width <= 0 || height <= 0) null else VideoTrackDetails(width, height, codecMime)
         } catch (_: Exception) {
             null
         } finally {
             extractor.release()
         }
     }
+
+    private data class VideoTrackDetails(
+        val width: Int,
+        val height: Int,
+        val codecMime: String?,
+    )
 }

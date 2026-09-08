@@ -256,6 +256,7 @@ class BurnWorker @AssistedInject constructor(
             durationMs = inputData.getLong(KEY_DURATION, 0L),
             displayName = inputData.getString(KEY_DISPLAY_NAME) ?: "burned.mp4",
             outputFolderUri = inputData.getString(KEY_OUTPUT_FOLDER_URI),
+            isAv1 = inputData.getBoolean(KEY_IS_AV1, false),
         )
     }
 
@@ -292,6 +293,7 @@ class BurnWorker @AssistedInject constructor(
         const val KEY_EXIT = "exit"
         const val KEY_CANCELLED = "cancelled"
         const val KEY_OUTPUT_FOLDER_URI = "outputFolderUri"
+        const val KEY_IS_AV1 = "isAv1"
 
         fun inputData(job: BurnJob) = workDataOf(
             KEY_ID to job.id,
@@ -317,6 +319,7 @@ class BurnWorker @AssistedInject constructor(
             KEY_DURATION to job.durationMs,
             KEY_DISPLAY_NAME to job.displayName,
             KEY_OUTPUT_FOLDER_URI to job.outputFolderUri,
+            KEY_IS_AV1 to job.isAv1,
         )
 
         fun parseId(raw: String): UUID = UUID.fromString(raw)

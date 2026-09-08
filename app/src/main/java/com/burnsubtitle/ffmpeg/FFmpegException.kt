@@ -29,10 +29,12 @@ sealed class FFmpegException(message: String, cause: Throwable? = null) : Except
                         FFmpegFailureReason.UNSUPPORTED_ENCODING
                     "font" in lower && ("not found" in lower || "missing" in lower || "cannot load" in lower || "no fonts" in lower) ->
                         FFmpegFailureReason.MISSING_FONT
+                    "hardware accelerated" in lower || "failed to get pixel format" in lower ||
+                        "mediacodec" in lower || "get current frame error" in lower ||
+                        "encoder" in lower || "decoder" in lower || "codec" in lower || "libx264" in lower ->
+                        FFmpegFailureReason.CODEC_FAILURE
                     "filtergraph" in lower || "filter" in lower || "libass" in lower ->
                         FFmpegFailureReason.FILTER_FAILURE
-                    "encoder" in lower || "decoder" in lower || "codec" in lower || "libx264" in lower ->
-                        FFmpegFailureReason.CODEC_FAILURE
                     "no space left" in lower || "enospc" in lower ->
                         FFmpegFailureReason.INSUFFICIENT_STORAGE
                     "invalid data found" in lower || "moov atom not found" in lower || "stream not found" in lower ->

@@ -13,6 +13,7 @@ extern "C" {
 #include <libavutil/avutil.h>
 #include <libavutil/display.h>
 #include <libavutil/opt.h>
+#include <libavutil/pixdesc.h>
 #include <libavutil/pixfmt.h>
 #include <libavutil/time.h>
 }
@@ -159,9 +160,38 @@ int open_input(Pipeline *p, const char *path) {
     return 0;
 }
 
+enum AVPixelFormat get_format_callback(AVCodecContext * /* s */, const enum AVPixelFormat *fmt) {
+    for (const enum AVPixelFormat *p = fmt; *p != AV_PIX_FMT_NONE; ++p) {
+#if defined(AV_PIX_FMT_MEDIACODEC)
+        if (*p == AV_PIX_FMT_MEDIACODEC) {
+            continue;
+        }
+#endif
+        const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(*p);
+        if (desc && (desc->flags & AV_PIX_FMT_FLAG_HWACCEL)) {
+            continue;
+        }
+        return *p;
+    }
+    return AV_PIX_FMT_NONE;
+}
+
 int open_decoder(Pipeline *p) {
     AVStream *st = p->in->streams[p->video_in];
-    const AVCodec *codec = avcodec_find_decoder(st->codecpar->codec_id);
+    const AVCodec *codec = nullptr;
+    if (st->codecpar->codec_id == AV_CODEC_ID_AV1) {
+        codec = avcodec_find_decoder_by_name("libdav1d");
+        if (!codec) {
+            codec = avcodec_find_decoder_by_name("av1");
+        }
+    } else if (st->codecpar->codec_id == AV_CODEC_ID_H264) {
+        codec = avcodec_find_decoder_by_name("h264");
+    } else if (st->codecpar->codec_id == AV_CODEC_ID_HEVC) {
+        codec = avcodec_find_decoder_by_name("hevc");
+    }
+    if (!codec) {
+        codec = avcodec_find_decoder(st->codecpar->codec_id);
+    }
     if (!codec) {
         return AVERROR_DECODER_NOT_FOUND;
     }
@@ -174,6 +204,7 @@ int open_decoder(Pipeline *p) {
         return err;
     }
     p->decoder->pkt_timebase = st->time_base;
+    p->decoder->get_format = get_format_callback;
     err = avcodec_open2(p->decoder, codec, nullptr);
     return err;
 }
@@ -201,13 +232,26 @@ int build_filters(Pipeline *p, const char *ass, const char *fonts) {
     if (fps.num <= 0 || fps.den <= 0) {
         fps = av_make_q(0, 1);
     }
+    enum AVPixelFormat src_pix_fmt = p->decoder->pix_fmt;
+    if (src_pix_fmt == AV_PIX_FMT_NONE) {
+        src_pix_fmt = static_cast<enum AVPixelFormat>(in_stream->codecpar->format);
+    }
+#if defined(AV_PIX_FMT_MEDIACODEC)
+    if (src_pix_fmt == AV_PIX_FMT_MEDIACODEC) {
+        src_pix_fmt = AV_PIX_FMT_YUV420P;
+    }
+#endif
+    if (src_pix_fmt == AV_PIX_FMT_NONE) {
+        src_pix_fmt = AV_PIX_FMT_YUV420P;
+    }
+    p->decoder->pix_fmt = src_pix_fmt;
     snprintf(
             args,
             sizeof(args),
             "video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:pixel_aspect=%d/%d:frame_rate=%d/%d",
             p->decoder->width,
             p->decoder->height,
-            p->decoder->pix_fmt,
+            src_pix_fmt,
             tb.num,
             tb.den,
             sar.num,

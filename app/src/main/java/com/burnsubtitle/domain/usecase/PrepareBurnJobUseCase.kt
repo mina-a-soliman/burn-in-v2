@@ -66,6 +66,7 @@ class PrepareBurnJobUseCase @Inject constructor(
                 durationMs = video.durationMs,
                 displayName = burnedName(video.displayName),
                 outputFolderUri = outputFolderUri,
+                isAv1 = video.isAv1,
             )
         } catch (cancelled: CancellationException) {
             tempFiles.deleteJobDir(jobId)

@@ -12,4 +12,5 @@ data class BurnJob(
     val durationMs: Long,
     val displayName: String,
     val outputFolderUri: String? = null,
+    val isAv1: Boolean = false,
 )

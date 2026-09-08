@@ -36,6 +36,11 @@ class FontRuntime @Inject constructor() {
                 throw FileSelectionException.FontsMissing()
             }
         }
+        val defaultFont = File(fontsDir, "default.ttf")
+        val arabicSource = File(fontsDir, SubtitleFonts.ARABIC_FILE)
+        if (arabicSource.exists() && (!defaultFont.exists() || defaultFont.length() != arabicSource.length())) {
+            arabicSource.copyTo(defaultFont, overwrite = true)
+        }
         val configDir = File(context.filesDir, "fontconfig")
         configDir.mkdirs()
         val config = File(configDir, "fonts.conf")

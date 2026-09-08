@@ -55,4 +55,25 @@ class FFmpegCommandFactoryTest {
             escaped,
         )
     }
+
+    @Test
+    fun forcesAv1SoftwareDecodeWhenJobIsAv1() {
+        val av1Job = job.copy(isAv1 = true)
+        val args = factory.build(av1Job)
+        val inputIndex = args.indexOf("-i")
+        val codecIndex = args.indexOf("-c:v")
+        assertTrue("Expected -c:v before -i for input decoding", codecIndex in 0 until inputIndex)
+        assertEquals("av1", args[codecIndex + 1])
+        assertFalse("Must never use mediacodec hwaccel for AV1", args.contains("-hwaccel"))
+        assertFalse(args.contains("mediacodec"))
+    }
+
+    @Test
+    fun doesNotAddAv1DecoderFlagWhenJobIsNotAv1() {
+        val regularJob = job.copy(isAv1 = false)
+        val args = factory.build(regularJob)
+        val inputIndex = args.indexOf("-i")
+        val argsBeforeInput = args.subList(0, inputIndex)
+        assertFalse(argsBeforeInput.contains("-c:v"))
+    }
 }
