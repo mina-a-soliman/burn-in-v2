@@ -102,12 +102,12 @@ std::string autorotate_prefix(AVStream *st, bool *swaps_dimensions) {
 
 std::string escape_filter_path(const char *path) {
     std::string out;
-    out.reserve(strlen(path) + 8);
+    out.reserve(strlen(path) * 2 + 8);
     for (const char *p = path; *p; ++p) {
         if (*p == '\\') {
             out += '/';
         } else {
-            if (*p == ':' || *p == '\'' || *p == '[' || *p == ']' || *p == ',' || *p == ';') {
+            if (*p == ':' || *p == '\'' || *p == '[' || *p == ']' || *p == ',' || *p == ';' || *p == '=' || *p == ' ') {
                 out += '\\';
             }
             out += *p;
@@ -237,7 +237,7 @@ int build_filters(Pipeline *p, const char *ass, const char *fonts) {
     filt += escape_filter_path(ass);
     filt += ":fontsdir=";
     filt += escape_filter_path(fonts);
-    filt += ":charenc=UTF-8:original_size=";
+    filt += ":original_size=";
     filt += std::to_string(upright_w);
     filt += "x";
     filt += std::to_string(upright_h);

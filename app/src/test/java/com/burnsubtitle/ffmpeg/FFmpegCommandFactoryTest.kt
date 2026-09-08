@@ -29,7 +29,7 @@ class FFmpegCommandFactoryTest {
         assertTrue(filter.startsWith("subtitles="))
         assertTrue(filter.contains("filename=/data/data/com.burnsubtitle/cache/styled.ass"))
         assertTrue(filter.contains("fontsdir=/data/data/com.burnsubtitle/files/fonts"))
-        assertTrue(filter.contains("charenc=UTF-8"))
+        assertFalse("subtitles filter must not contain charenc", filter.contains("charenc"))
         assertTrue(filter.contains("original_size=1920x1080"))
         assertEquals("libx264", args[args.indexOf("-c:v") + 1])
         assertEquals("18", args[args.indexOf("-crf") + 1])
@@ -44,5 +44,15 @@ class FFmpegCommandFactoryTest {
     fun escapesFilterSpecialCharacters() {
         val escaped = FFmpegCommandFactory.escapeFilterPath("/tmp/a:b/file.ass")
         assertEquals("/tmp/a\\:b/file.ass", escaped)
+    }
+
+    @Test
+    fun escapesSpacesAndEqualsAndPunctuationInPaths() {
+        val path = "/storage/emulated/0/My Videos/sub=1,2;[a]'test'.ass"
+        val escaped = FFmpegCommandFactory.escapeFilterPath(path)
+        assertEquals(
+            "/storage/emulated/0/My\\ Videos/sub\\=1\\,2\\;\\[a\\]\\'test\\'.ass",
+            escaped,
+        )
     }
 }

@@ -31,7 +31,7 @@ Release APKs are produced by **GitHub Actions**. You do not need Android Studio 
 | WebVTT | `.vtt` | Cue text is converted to ASS for burn |
 | Advanced SubStation Alpha | `.ass` / `.ssa` | Restyled to the in-app look; timing and dialogue text are kept |
 
-Encoding: UTF-8 (with or without BOM), UTF-16 LE/BE. The burn path always writes a UTF-8 ASS file with BOM and `charenc=UTF-8`.
+Encoding: UTF-8 (with or without BOM), UTF-16 LE/BE, windows-1256. The burn path always writes a canonical UTF-8 ASS file with BOM (no runtime iconv required).
 
 ## Supported languages
 
@@ -65,7 +65,7 @@ Typical encode:
 4. Native code runs an FFmpeg pipeline equivalent to:
    - video re-encode: **libx264**, **CRF 18**, `veryfast`, `yuv420p`
    - audio: **copy**
-   - filter: `subtitles=…:charenc=UTF-8:fontsdir=…`
+   - filter: `subtitles=filename=…:fontsdir=…:original_size=…`
    - **`-sn`** so the output has no subtitle stream
    - `+faststart` for playback
 5. On Android 10+, the MP4 is saved to **Movies/BurnSubtitle**. On Android 8–9 it is shared via FileProvider from app storage.

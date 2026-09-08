@@ -133,11 +133,13 @@ class EncodeViewModel @Inject constructor(
                 BurnResult.Failure(
                     message = outputData.getString(BurnWorker.KEY_ERROR) ?: "Burn failed",
                     exitCode = outputData.getInt(BurnWorker.KEY_EXIT, Int.MIN_VALUE).takeIf { it != Int.MIN_VALUE },
+                    details = outputData.getString(BurnWorker.KEY_LOGS).takeIf { !it.isNullOrBlank() },
                 )
             }
             else -> BurnResult.Failure(
                 message = outputData.getString(BurnWorker.KEY_ERROR) ?: "Burn failed",
                 exitCode = outputData.getInt(BurnWorker.KEY_EXIT, Int.MIN_VALUE).takeIf { it != Int.MIN_VALUE },
+                details = outputData.getString(BurnWorker.KEY_LOGS).takeIf { !it.isNullOrBlank() },
             )
         }
     }

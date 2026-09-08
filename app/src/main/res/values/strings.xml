@@ -74,6 +74,11 @@
     <string name="error_ffmpeg_missing">FFmpeg is not packaged in this APK. Install a CI-built release.</string>
     <string name="error_ffmpeg_cancelled">Export cancelled.</string>
     <string name="error_ffmpeg_failed">Could not burn subtitles into the video.</string>
+    <string name="error_ffmpeg_unsupported_encoding">The subtitle character encoding is not supported. Please use UTF-8.</string>
+    <string name="error_ffmpeg_filter">Failed to process subtitle video filter.</string>
+    <string name="error_ffmpeg_codec">Video encoder failed. Check device codec support.</string>
+    <string name="error_ffmpeg_show_details">Show error details</string>
+    <string name="error_ffmpeg_hide_details">Hide error details</string>
     <string name="error_ffmpeg_no_output">The exported video was not created.</string>
     <string name="notification_channel">Export</string>
     <string name="notification_title">Burning subtitles</string>

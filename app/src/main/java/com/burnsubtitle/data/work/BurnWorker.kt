@@ -18,6 +18,7 @@ import com.burnsubtitle.domain.model.SubtitlePosition
 import com.burnsubtitle.domain.model.SubtitleStyle
 import com.burnsubtitle.ffmpeg.FFmpegEngine
 import com.burnsubtitle.ffmpeg.FFmpegException
+import com.burnsubtitle.ffmpeg.FFmpegFailureReason
 import com.burnsubtitle.ffmpeg.SubtitleBurnProcessor
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -130,6 +131,7 @@ class BurnWorker @AssistedInject constructor(
                         put("outputPath", job.outputPath)
                         if (failed != null) {
                             put("exitCode", failed.exitCode)
+                            put("failureReason", failed.reason.name)
                             if (failed.lastLog.isNotBlank()) {
                                 put("ffmpegLogs", "\n" + failed.lastLog)
                             }
@@ -140,6 +142,7 @@ class BurnWorker @AssistedInject constructor(
                     workDataOf(
                         KEY_ERROR to errorMessage(error),
                         KEY_EXIT to (failed?.exitCode ?: Int.MIN_VALUE),
+                        KEY_LOGS to (failed?.lastLog ?: ""),
                     ),
                 )
             } catch (error: Exception) {
@@ -191,7 +194,16 @@ class BurnWorker @AssistedInject constructor(
             is FFmpegException.NotAvailable -> R.string.error_ffmpeg_missing
             is FFmpegException.Cancelled -> R.string.error_ffmpeg_cancelled
             is FFmpegException.InvalidOutput -> R.string.error_ffmpeg_no_output
-            is FFmpegException.Failed -> R.string.error_ffmpeg_failed
+            is FFmpegException.Failed -> when (error.reason) {
+                FFmpegFailureReason.UNSUPPORTED_ENCODING -> R.string.error_ffmpeg_unsupported_encoding
+                FFmpegFailureReason.FILTER_FAILURE -> R.string.error_ffmpeg_filter
+                FFmpegFailureReason.CODEC_FAILURE -> R.string.error_ffmpeg_codec
+                FFmpegFailureReason.MISSING_FONT -> R.string.error_fonts_missing
+                FFmpegFailureReason.INSUFFICIENT_STORAGE -> R.string.error_insufficient_space
+                FFmpegFailureReason.INVALID_VIDEO -> R.string.error_video_unreadable
+                FFmpegFailureReason.INVALID_SUBTITLE -> R.string.error_subtitle_invalid
+                FFmpegFailureReason.GENERAL -> R.string.error_ffmpeg_failed
+            }
         }
         return applicationContext.getString(res)
     }
@@ -276,6 +288,7 @@ class BurnWorker @AssistedInject constructor(
         const val KEY_OUTPUT_URI = "outputUri"
         const val KEY_OUTPUT_PATH = "outputPath"
         const val KEY_ERROR = "error"
+        const val KEY_LOGS = "logs"
         const val KEY_EXIT = "exit"
         const val KEY_CANCELLED = "cancelled"
         const val KEY_OUTPUT_FOLDER_URI = "outputFolderUri"

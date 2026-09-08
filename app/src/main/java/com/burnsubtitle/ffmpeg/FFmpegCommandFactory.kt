@@ -44,7 +44,7 @@ class FFmpegCommandFactory @Inject constructor() {
         val fonts = escapeFilterPath(job.fontsDir)
         val width = job.videoWidth.coerceAtLeast(1)
         val height = job.videoHeight.coerceAtLeast(1)
-        return "subtitles=filename=$ass:fontsdir=$fonts:charenc=UTF-8:original_size=${width}x$height"
+        return "subtitles=filename=$ass:fontsdir=$fonts:original_size=${width}x$height"
     }
 
     companion object {
@@ -63,6 +63,8 @@ class FFmpegCommandFactory @Inject constructor() {
                 .replace("]", "\\]")
                 .replace(",", "\\,")
                 .replace(";", "\\;")
+                .replace("=", "\\=")
+                .replace(" ", "\\ ")
         }
 
         fun describe(args: List<String>): String = args.joinToString(" ")

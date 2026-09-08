@@ -74,6 +74,11 @@
     <string name="error_ffmpeg_missing">لم يُضمَّن FFmpeg في هذا التطبيق. ثبّت نسخة مبنية من CI.</string>
     <string name="error_ffmpeg_cancelled">تم إلغاء التصدير.</string>
     <string name="error_ffmpeg_failed">تعذر حرق الترجمة داخل الفيديو.</string>
+    <string name="error_ffmpeg_unsupported_encoding">ترميز أحرف ملف الترجمة غير مدعوم. يرجى استخدام ترميز UTF-8.</string>
+    <string name="error_ffmpeg_filter">فشل معالجة مرشح دمج الترجمة في الفيديو.</string>
+    <string name="error_ffmpeg_codec">فشل برنامج ترميز الفيديو. تحقق من دعم الجهاز للترميز.</string>
+    <string name="error_ffmpeg_show_details">عرض تفاصيل الخطأ</string>
+    <string name="error_ffmpeg_hide_details">إخفاء تفاصيل الخطأ</string>
     <string name="error_ffmpeg_no_output">لم يتم إنشاء ملف الفيديو المُصدَّر.</string>
     <string name="notification_channel">التصدير</string>
     <string name="notification_title">جاري حرق الترجمة</string>

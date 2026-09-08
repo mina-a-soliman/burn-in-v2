@@ -52,7 +52,7 @@ Extend in place. Do not replace SAF picking, the subtitle engine, or the JNI/pro
 ## Conventions
 
 - SAF only — no `READ_EXTERNAL_STORAGE` / `MANAGE_EXTERNAL_STORAGE`.
-- ASS output: UTF-8 BOM, `charenc=UTF-8`, `fontsdir`; do **not** pre-shape to presentation forms (Noto needs GSUB).
+- ASS output: UTF-8 BOM, fontsdir (never pass charenc=UTF-8 to subtitles filter as Android FFmpeg lacks iconv); do **not** pre-shape to presentation forms (Noto needs GSUB).
 - Numeric ASS/FFmpeg formatting: `Locale.US`.
 - Errors: typed exceptions → string resources (EN + `values-ar`).
 - Package: `com.burnsubtitle`. Continue the product (preview, export polish, CI native→APK) rather than greenfield.

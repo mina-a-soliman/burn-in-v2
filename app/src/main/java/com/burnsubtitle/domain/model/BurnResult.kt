@@ -10,6 +10,7 @@ sealed class BurnResult {
     data class Failure(
         val message: String,
         val exitCode: Int? = null,
+        val details: String? = null,
     ) : BurnResult()
 
     data object Cancelled : BurnResult()
