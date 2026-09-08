@@ -1,12 +1,7 @@
 -keepattributes *Annotation*, InnerClasses, EnclosingMethod, Signature, Exceptions
 
--keep class com.burnsubtitle.ffmpeg.FFmpegEngine {
-    native <methods>;
-    *;
-}
-
--keep class com.burnsubtitle.ffmpeg.SubtitleBurnProcessor { *; }
--keep class com.burnsubtitle.ffmpeg.FFmpegInitializer { *; }
+-keep class com.burnsubtitle.ffmpeg.** { *; }
+-keep class com.burnsubtitle.domain.error.** { *; }
 
 -keepclasseswithmembernames class * {
     native <methods>;

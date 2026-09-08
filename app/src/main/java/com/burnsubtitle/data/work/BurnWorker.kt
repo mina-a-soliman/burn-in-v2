@@ -115,25 +115,44 @@ class BurnWorker @AssistedInject constructor(
                 tempFiles.deleteJobDir(job.id)
                 cancelledResult()
             } catch (error: FFmpegException) {
+                val failed = error as? FFmpegException.Failed
                 errorLogger.log(
-                    error,
+                    error = error,
                     tag = "BurnWorker FFmpeg",
-                    extraDetails = mapOf(
-                        "jobId" to job.id,
-                        "exitCode" to (error as? FFmpegException.Failed)?.exitCode,
-                    ),
+                    extraDetails = buildMap {
+                        put("jobId", job.id)
+                        put("videoName", job.displayName)
+                        put("videoWidth", job.videoWidth)
+                        put("videoHeight", job.videoHeight)
+                        put("durationMs", job.durationMs)
+                        put("videoCachePath", job.videoCachePath)
+                        put("assPath", job.assPath)
+                        put("outputPath", job.outputPath)
+                        if (failed != null) {
+                            put("exitCode", failed.exitCode)
+                            if (failed.lastLog.isNotBlank()) {
+                                put("ffmpegLogs", "\n" + failed.lastLog)
+                            }
+                        }
+                    },
                 )
                 Result.failure(
                     workDataOf(
                         KEY_ERROR to errorMessage(error),
-                        KEY_EXIT to ((error as? FFmpegException.Failed)?.exitCode ?: Int.MIN_VALUE),
+                        KEY_EXIT to (failed?.exitCode ?: Int.MIN_VALUE),
                     ),
                 )
             } catch (error: Exception) {
                 errorLogger.log(
-                    error,
+                    error = error,
                     tag = "BurnWorker Exception",
-                    extraDetails = mapOf("jobId" to job.id),
+                    extraDetails = mapOf(
+                        "jobId" to job.id,
+                        "videoName" to job.displayName,
+                        "videoWidth" to job.videoWidth,
+                        "videoHeight" to job.videoHeight,
+                        "durationMs" to job.durationMs,
+                    ),
                 )
                 Result.failure(workDataOf(KEY_ERROR to (error.message ?: error.javaClass.simpleName)))
             } finally {
