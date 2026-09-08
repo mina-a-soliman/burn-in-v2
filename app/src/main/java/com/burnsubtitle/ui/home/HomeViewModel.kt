@@ -4,6 +4,8 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.burnsubtitle.R
+import com.burnsubtitle.data.logging.ErrorLogger
+import com.burnsubtitle.data.pref.AppPreferences
 import com.burnsubtitle.domain.model.SubtitleSource
 import com.burnsubtitle.domain.model.SubtitleStyle
 import com.burnsubtitle.domain.model.VideoSource
@@ -27,6 +29,10 @@ data class HomeUiState(
     val video: VideoSource? = null,
     val subtitle: SubtitleSource? = null,
     val style: SubtitleStyle = SubtitleStyle(),
+    val outputFolderName: String? = null,
+    val errorLogsFolderName: String? = null,
+    val hasCustomOutputFolder: Boolean = false,
+    val hasCustomErrorLogsFolder: Boolean = false,
     val errorRes: Int? = null,
     val exporting: Boolean = false,
     val probingVideo: Boolean = false,
@@ -43,6 +49,8 @@ class HomeViewModel @Inject constructor(
     private val selectSubtitle: SelectSubtitleUseCase,
     private val prepareJob: PrepareBurnJobUseCase,
     private val startBurn: StartBurnUseCase,
+    private val preferences: AppPreferences,
+    private val errorLogger: ErrorLogger,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HomeUiState())
@@ -67,6 +75,42 @@ class HomeViewModel @Inject constructor(
                 _state.update { it.copy(style = style) }
             }
         }
+        viewModelScope.launch {
+            preferences.outputFolder.collect { folder ->
+                _state.update {
+                    it.copy(
+                        outputFolderName = folder?.displayName,
+                        hasCustomOutputFolder = folder != null,
+                    )
+                }
+            }
+        }
+        viewModelScope.launch {
+            preferences.errorLogsFolder.collect { folder ->
+                _state.update {
+                    it.copy(
+                        errorLogsFolderName = folder?.displayName,
+                        hasCustomErrorLogsFolder = folder != null,
+                    )
+                }
+            }
+        }
+    }
+
+    fun onOutputFolderPicked(uri: Uri) {
+        preferences.setOutputFolder(uri)
+    }
+
+    fun clearOutputFolder() {
+        preferences.setOutputFolder(null)
+    }
+
+    fun onErrorLogsFolderPicked(uri: Uri) {
+        preferences.setErrorLogsFolder(uri)
+    }
+
+    fun clearErrorLogsFolder() {
+        preferences.setErrorLogsFolder(null)
     }
 
     fun onVideoPicked(uri: Uri) {
@@ -81,6 +125,7 @@ class HomeViewModel @Inject constructor(
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Throwable) {
+                errorLogger.log(error, tag = "Select Video", extraDetails = mapOf("uri" to uri.toString()))
                 _state.update { it.copy(errorRes = error.toHomeErrorRes()) }
             } finally {
                 _state.update { it.copy(probingVideo = false) }
@@ -100,6 +145,7 @@ class HomeViewModel @Inject constructor(
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Throwable) {
+                errorLogger.log(error, tag = "Select Subtitle", extraDetails = mapOf("uri" to uri.toString()))
                 _state.update { it.copy(errorRes = error.toHomeErrorRes()) }
             } finally {
                 _state.update { it.copy(probingSubtitle = false) }
@@ -117,7 +163,8 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             _state.update { it.copy(exporting = true, errorRes = null) }
             try {
-                val job = prepareJob(video, subtitle, session.style.value)
+                val customFolder = preferences.getOutputFolderUri()?.toString()
+                val job = prepareJob(video, subtitle, session.style.value, customFolder)
                 session.setJobId(startBurn(job))
                 _state.update { it.copy(exporting = false) }
                 onStarted()
@@ -125,6 +172,14 @@ class HomeViewModel @Inject constructor(
                 _state.update { it.copy(exporting = false) }
                 throw cancelled
             } catch (error: Throwable) {
+                errorLogger.log(
+                    error,
+                    tag = "Export Preparation",
+                    extraDetails = mapOf(
+                        "video" to video.displayName,
+                        "subtitle" to subtitle.displayName,
+                    ),
+                )
                 _state.update {
                     it.copy(exporting = false, errorRes = error.toHomeErrorRes())
                 }

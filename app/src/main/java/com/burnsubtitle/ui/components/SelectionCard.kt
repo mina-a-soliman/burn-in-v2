@@ -6,9 +6,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,6 +28,8 @@ fun SelectionCard(
     icon: ImageVector,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onClear: (() -> Unit)? = null,
+    clearContentDescription: String? = null,
 ) {
     Card(
         modifier = modifier
@@ -48,6 +53,15 @@ fun SelectionCard(
                         supporting,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            if (onClear != null) {
+                IconButton(onClick = onClear) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = clearContentDescription,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }

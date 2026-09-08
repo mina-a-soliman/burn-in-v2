@@ -32,6 +32,7 @@ class PrepareBurnJobUseCase @Inject constructor(
         video: VideoSource,
         subtitle: SubtitleSource,
         style: SubtitleStyle,
+        outputFolderUri: String? = null,
     ): BurnJob = withContext(Dispatchers.IO) {
         tempFiles.requireSpaceForVideo(video.sizeBytes)
         val jobId = UUID.randomUUID().toString()
@@ -64,6 +65,7 @@ class PrepareBurnJobUseCase @Inject constructor(
                 videoHeight = video.height,
                 durationMs = video.durationMs,
                 displayName = burnedName(video.displayName),
+                outputFolderUri = outputFolderUri,
             )
         } catch (cancelled: CancellationException) {
             tempFiles.deleteJobDir(jobId)

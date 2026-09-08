@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.provider.DocumentsContract
 import android.provider.MediaStore
 import androidx.core.content.FileProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -17,11 +18,35 @@ import javax.inject.Singleton
 class MediaStoreExporter @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
-    fun exportVideo(source: File, displayName: String): Uri {
+    fun exportVideo(source: File, displayName: String, outputFolderUri: Uri? = null): Uri {
+        if (outputFolderUri != null) {
+            return exportToCustomFolder(source, displayName, outputFolderUri)
+        }
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             exportViaMediaStore(source, displayName)
         } else {
             exportViaFileProvider(source, displayName)
+        }
+    }
+
+    private fun exportToCustomFolder(source: File, displayName: String, treeUri: Uri): Uri {
+        val docId = DocumentsContract.getTreeDocumentId(treeUri)
+        val parentDocUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
+        val targetUri = DocumentsContract.createDocument(
+            context.contentResolver,
+            parentDocUri,
+            "video/mp4",
+            displayName,
+        ) ?: throw IOException("Failed to create video file in selected folder")
+
+        try {
+            context.contentResolver.openOutputStream(targetUri)?.use { output ->
+                source.inputStream().use { input -> input.copyTo(output) }
+            } ?: throw IOException("Unable to write to $targetUri")
+            return targetUri
+        } catch (error: Exception) {
+            runCatching { DocumentsContract.deleteDocument(context.contentResolver, targetUri) }
+            throw error
         }
     }
 

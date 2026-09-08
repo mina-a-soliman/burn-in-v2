@@ -12,6 +12,14 @@
     <string name="home_change">تغيير</string>
     <string name="home_export_need_files">اختر فيديو وملف ترجمة أولاً.</string>
     <string name="home_exporting">جاري بدء التصدير…</string>
+    <string name="home_output_folder">مجلد حفظ الفيديو</string>
+    <string name="home_output_folder_default">الافتراضي (Movies/BurnSubtitle)</string>
+    <string name="home_output_folder_supporting">اختر المجلد الذي سيتم حفظ الفيديوهات المعالجة فيه</string>
+    <string name="home_error_logs_folder">مجلد سجلات الأخطاء</string>
+    <string name="home_error_logs_folder_none">لم يتم التحديد</string>
+    <string name="home_error_logs_folder_supporting">سيتم حفظ تفاصيل أي خطأ في ملف يبدأ بـ b-e-{datetime}</string>
+    <string name="home_clear_folder">إعادة للوضع الافتراضي</string>
+    <string name="home_clear_error_logs_folder">إلغاء تحديد مجلد الأخطاء</string>
     <string name="home_style_summary">الموضع %1$s · الحجم %2$d</string>
     <string name="home_video_meta">%1$d×%2$d · %3$s</string>
     <string name="home_subtitle_meta">%1$s · %2$d سطر</string>

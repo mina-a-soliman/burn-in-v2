@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.Tune
@@ -65,6 +67,16 @@ fun HomeScreen(
     }
     val subtitlePicker = rememberLauncherForActivityResult(PersistableOpenDocument()) { uri ->
         if (uri != null) viewModel.onSubtitlePicked(uri)
+    }
+    val outputFolderPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree(),
+    ) { uri ->
+        if (uri != null) viewModel.onOutputFolderPicked(uri)
+    }
+    val errorLogsFolderPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree(),
+    ) { uri ->
+        if (uri != null) viewModel.onErrorLogsFolderPicked(uri)
     }
     val notificationPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -141,6 +153,30 @@ fun HomeScreen(
                 },
                 icon = Icons.Filled.Subtitles,
                 onClick = { subtitlePicker.launch(SafMimeTypes.SUBTITLE) },
+            )
+
+            SelectionCard(
+                title = stringResource(R.string.home_output_folder),
+                body = state.outputFolderName ?: stringResource(R.string.home_output_folder_default),
+                supporting = stringResource(R.string.home_output_folder_supporting),
+                icon = Icons.Filled.Folder,
+                onClick = { outputFolderPicker.launch(null) },
+                onClear = if (state.hasCustomOutputFolder) {
+                    { viewModel.clearOutputFolder() }
+                } else null,
+                clearContentDescription = stringResource(R.string.home_clear_folder),
+            )
+
+            SelectionCard(
+                title = stringResource(R.string.home_error_logs_folder),
+                body = state.errorLogsFolderName ?: stringResource(R.string.home_error_logs_folder_none),
+                supporting = stringResource(R.string.home_error_logs_folder_supporting),
+                icon = Icons.Filled.BugReport,
+                onClick = { errorLogsFolderPicker.launch(null) },
+                onClear = if (state.hasCustomErrorLogsFolder) {
+                    { viewModel.clearErrorLogsFolder() }
+                } else null,
+                clearContentDescription = stringResource(R.string.home_clear_error_logs_folder),
             )
 
             Text(

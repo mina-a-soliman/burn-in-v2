@@ -2,6 +2,7 @@ package com.burnsubtitle.data.saf
 
 import android.content.Context
 import android.net.Uri
+import android.provider.DocumentsContract
 import android.provider.OpenableColumns
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -43,5 +44,31 @@ class SafDocumentQuery @Inject constructor(
             mimeType = mimeType,
             sizeBytes = sizeBytes,
         )
+    }
+
+    fun queryFolderDisplayName(treeUri: Uri): String {
+        return runCatching {
+            val docId = DocumentsContract.getTreeDocumentId(treeUri)
+            val docUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
+            var displayName: String? = null
+            context.contentResolver.query(
+                docUri,
+                arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME),
+                null,
+                null,
+                null,
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val idx = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+                    if (idx >= 0 && !cursor.isNull(idx)) {
+                        displayName = cursor.getString(idx)
+                    }
+                }
+            }
+            displayName?.takeIf { it.isNotBlank() }
+                ?: docId.substringAfterLast(':').substringAfterLast('/').ifBlank { "Folder" }
+        }.getOrElse {
+            treeUri.lastPathSegment?.substringAfterLast(':')?.substringAfterLast('/') ?: "Folder"
+        }
     }
 }

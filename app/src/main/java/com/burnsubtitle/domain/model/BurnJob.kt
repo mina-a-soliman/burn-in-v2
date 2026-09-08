@@ -11,4 +11,5 @@ data class BurnJob(
     val videoHeight: Int,
     val durationMs: Long,
     val displayName: String,
+    val outputFolderUri: String? = null,
 )

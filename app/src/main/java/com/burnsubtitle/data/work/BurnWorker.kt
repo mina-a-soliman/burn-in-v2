@@ -2,6 +2,7 @@ package com.burnsubtitle.data.work
 
 import android.content.Context
 import android.content.pm.ServiceInfo
+import android.net.Uri
 import android.os.Build
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
@@ -9,6 +10,7 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.burnsubtitle.R
+import com.burnsubtitle.data.logging.ErrorLogger
 import com.burnsubtitle.data.media.MediaStoreExporter
 import com.burnsubtitle.data.saf.TempFileStore
 import com.burnsubtitle.domain.model.BurnJob
@@ -40,13 +42,19 @@ class BurnWorker @AssistedInject constructor(
     private val exporter: MediaStoreExporter,
     private val notifier: BurnForegroundNotifier,
     private val tempFiles: TempFileStore,
+    private val errorLogger: ErrorLogger,
 ) : CoroutineWorker(context, params) {
 
     private val stopScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override suspend fun doWork(): Result {
         engine.resetForNewJob()
-        val job = jobFromInput() ?: return Result.failure(workDataOf(KEY_ERROR to "Missing burn job"))
+        val job = jobFromInput()
+        if (job == null) {
+            val error = IllegalStateException("Missing burn job input data")
+            errorLogger.log(error, tag = "BurnWorker")
+            return Result.failure(workDataOf(KEY_ERROR to "Missing burn job"))
+        }
         notifyForeground(0)
         return coroutineScope {
             val progressJob = launch {
@@ -77,10 +85,17 @@ class BurnWorker @AssistedInject constructor(
                 }
                 val output = File(job.outputPath)
                 if (!output.exists() || output.length() == 0L) {
-                    return@coroutineScope Result.failure(workDataOf(KEY_ERROR to errorMessage(FFmpegException.InvalidOutput())))
+                    val invalidOutput = FFmpegException.InvalidOutput()
+                    errorLogger.log(
+                        invalidOutput,
+                        tag = "BurnWorker Output",
+                        extraDetails = mapOf("jobId" to job.id, "outputPath" to job.outputPath),
+                    )
+                    return@coroutineScope Result.failure(workDataOf(KEY_ERROR to errorMessage(invalidOutput)))
                 }
                 val uri = withContext(Dispatchers.IO) {
-                    exporter.exportVideo(output, job.displayName)
+                    val folderUri = job.outputFolderUri?.takeIf { it.isNotBlank() }?.let { Uri.parse(it) }
+                    exporter.exportVideo(output, job.displayName, folderUri)
                 }
                 // The burn is published to MediaStore (or the shared dir pre-Q), so the
                 // input copy and the encoder output must not keep ~2x the video in cache.
@@ -100,6 +115,14 @@ class BurnWorker @AssistedInject constructor(
                 tempFiles.deleteJobDir(job.id)
                 cancelledResult()
             } catch (error: FFmpegException) {
+                errorLogger.log(
+                    error,
+                    tag = "BurnWorker FFmpeg",
+                    extraDetails = mapOf(
+                        "jobId" to job.id,
+                        "exitCode" to (error as? FFmpegException.Failed)?.exitCode,
+                    ),
+                )
                 Result.failure(
                     workDataOf(
                         KEY_ERROR to errorMessage(error),
@@ -107,6 +130,11 @@ class BurnWorker @AssistedInject constructor(
                     ),
                 )
             } catch (error: Exception) {
+                errorLogger.log(
+                    error,
+                    tag = "BurnWorker Exception",
+                    extraDetails = mapOf("jobId" to job.id),
+                )
                 Result.failure(workDataOf(KEY_ERROR to (error.message ?: error.javaClass.simpleName)))
             } finally {
                 progressJob.cancel()
@@ -196,6 +224,7 @@ class BurnWorker @AssistedInject constructor(
             videoHeight = inputData.getInt(KEY_HEIGHT, 720),
             durationMs = inputData.getLong(KEY_DURATION, 0L),
             displayName = inputData.getString(KEY_DISPLAY_NAME) ?: "burned.mp4",
+            outputFolderUri = inputData.getString(KEY_OUTPUT_FOLDER_URI),
         )
     }
 
@@ -230,6 +259,7 @@ class BurnWorker @AssistedInject constructor(
         const val KEY_ERROR = "error"
         const val KEY_EXIT = "exit"
         const val KEY_CANCELLED = "cancelled"
+        const val KEY_OUTPUT_FOLDER_URI = "outputFolderUri"
 
         fun inputData(job: BurnJob) = workDataOf(
             KEY_ID to job.id,
@@ -254,6 +284,7 @@ class BurnWorker @AssistedInject constructor(
             KEY_HEIGHT to job.videoHeight,
             KEY_DURATION to job.durationMs,
             KEY_DISPLAY_NAME to job.displayName,
+            KEY_OUTPUT_FOLDER_URI to job.outputFolderUri,
         )
 
         fun parseId(raw: String): UUID = UUID.fromString(raw)
