@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <cache-path name="burned_videos" path="output/" />
+    <cache-path name="picked_files" path="picks/" />
+    <cache-path name="job_files" path="jobs/" />
+    <files-path name="shared_videos" path="shared/" />
+</paths>

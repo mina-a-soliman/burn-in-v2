@@ -1,0 +1,58 @@
+---
+description: Burn Subtitle project memory — continue the app in a new session
+alwaysApply: true
+---
+
+# Burn Subtitle — session memory
+
+Offline Kotlin Android app (`com.burnsubtitle`) that **hard-burns** SRT/ASS/VTT into video with **FFmpeg inside the APK**. No internet permission, no root, no user-installed FFmpeg/Termux. minSdk 26. UI: Compose + Hilt + WorkManager. EN + AR strings.
+
+GitHub Actions is the release/FFmpeg build path (`.github/workflows/build-apk.yml`, `native-cache.yml`). Do not tell developers to install NDK/FFmpeg to ship.
+
+## Do not rewrite working layers
+
+Extend in place. Do not replace SAF picking, the subtitle engine, or the JNI/processor split unless fixing a bug.
+
+## Implemented
+
+1. **UI flow:** Home → style → encode (foreground worker) → result (share/open).
+2. **File pick:** SAF `PersistableOpenDocument`. Video = URI only (large files). Subtitles cached under `cacheDir/picks/` after parse. Persistable read grants.
+3. **Subtitle engine:** Parse SRT/ASS/VTT → UTF-8 ASS. Logical-order Arabic (HarfBuzz shapes; FriBidi + RLI/LRI/PDI for RTL/mixed). Noto Naskh Arabic + Noto Sans. `SubtitleEngine` is the facade.
+4. **FFmpeg path:** `SubtitleBurnProcessor` → `FFmpegEngine.nativeBurn`. Video re-encode **libx264 CRF 18**, audio copy, `-sn`. Progress + cancel. `BurnWorker` is the processing service.
+
+## FFmpeg packaging (important)
+
+- JNI stub compiles without prebuilts (`native/CMakeLists.txt`). Real burn needs headers in `native/prebuilt/include` or `native/out/prefix/$ABI` and `.so` in `app/src/main/jniLibs/`.
+- Those libs come from `native/scripts/build-ffmpeg.sh` (libass, HarfBuzz, FriBidi, x264) via `native-cache.yml`. Until then, execute returns **64** → `FFmpegException.NotAvailable`.
+- Wire native artifacts into APK assemble before calling the burn “done”.
+
+## Key files
+
+- Pick: `ui/picker/`, `data/saf/`, `SelectVideoUseCase`, `SelectSubtitleUseCase`
+- Subs: `domain/subtitle/SubtitleEngine.kt`, `domain/ass/`, `domain/parser/`
+- FFmpeg: `ffmpeg/FFmpegEngine.kt`, `SubtitleBurnProcessor.kt`, `FFmpegCommandFactory.kt`, `native/jni/ffmpeg_burn.cpp`
+- Work: `data/work/BurnWorker.kt`, `PrepareBurnJobUseCase.kt`
+
+## Traps already hit (do not reintroduce)
+
+- `AssDocumentWriter` must emit unindented lines. A raw string + `trimIndent()` breaks as soon as a multi-line value is interpolated, and libass then matches nothing.
+- `CoroutineWorker.onStopped` is `final`; `BurnWorker` watches `isStopped` from its own scope instead.
+- Dagger needs `List<@JvmSuppressWildcards SubtitleParser>` at the injection site.
+- Progress must be throttled (`distinctUntilChanged` on percent) before `setForeground`/`setProgress`.
+- HarfBuzz must be built with `-Dfreetype=enabled` (libass shapes via `hb-ft`), and FFmpeg needs `--extra-libs="-lc++_shared"` because libass pulls in C++ HarfBuzz.
+- The buffersrc `time_base` is the **input stream's**, not `decoder->time_base`.
+- Rotation is applied in the filter graph (`autorotate_prefix`) before `subtitles`, so `original_size` and ASS `PlayRes` use upright dimensions.
+- AAC audio is stream-copied through an `aac_adtstoasc` bitstream filter; without it, ADTS audio from `.ts`/`.m2ts` cannot be muxed into MP4. `libavcodec/bsf.h` is a separate include in FFmpeg 7.
+- Encoding is libx264 only. Never fall back to `avcodec_find_encoder(AV_CODEC_ID_H264)`, which can select `h264_mediacodec` and needs hardware frame contexts this pipeline does not create.
+- The NDK sysroot dir for 32-bit ARM is `arm-linux-androideabi`, not `armv7a-linux-androideabi`; `package-jniLibs.sh` needs the former to find `libc++_shared.so`.
+- Burn work uses one constant unique name (`StartBurnUseCase.UNIQUE_WORK_NAME`). Keying it by job id lets two encodes run at once, since every export mints a new id.
+- Only `avutil/swresample/swscale/avcodec/avformat/avfilter` ship as `.so`; libass, HarfBuzz, FreeType and FriBidi are static inside `libavfilter`, so do not try to load or link them separately.
+- `SubtitleDecoder` must check BOM-less UTF-16 before UTF-8: UTF-16 bytes are legal UTF-8, so a strict UTF-8 decode "succeeds" and returns NUL-laden text.
+
+## Conventions
+
+- SAF only — no `READ_EXTERNAL_STORAGE` / `MANAGE_EXTERNAL_STORAGE`.
+- ASS output: UTF-8 BOM, `charenc=UTF-8`, `fontsdir`; do **not** pre-shape to presentation forms (Noto needs GSUB).
+- Numeric ASS/FFmpeg formatting: `Locale.US`.
+- Errors: typed exceptions → string resources (EN + `values-ar`).
+- Package: `com.burnsubtitle`. Continue the product (preview, export polish, CI native→APK) rather than greenfield.

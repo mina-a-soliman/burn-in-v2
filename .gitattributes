@@ -1,0 +1,13 @@
+* text=auto
+*.sh text eol=lf
+gradlew text eol=lf
+*.bat text eol=crlf
+*.jar binary
+*.ttf binary
+*.otf binary
+*.so binary
+*.mp4 binary
+*.png binary
+*.webp binary
+app/src/main/jniLibs/**/*.so filter=lfs diff=lfs merge=lfs -text
+third_party/prebuilt/**/*.so filter=lfs diff=lfs merge=lfs -text
