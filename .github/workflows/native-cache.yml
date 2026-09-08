@@ -1,0 +1,79 @@
+name: Native FFmpeg cache
+
+on:
+  workflow_dispatch:
+  workflow_call:
+  push:
+    paths:
+      - third_party/ffmpeg.lock
+      - native/scripts/**
+      - native/patches/**
+
+concurrency:
+  group: native-ffmpeg-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  ffmpeg:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Android
+        uses: ./.github/actions/setup-android
+
+      - name: Make native scripts executable
+        run: chmod +x native/scripts/*.sh
+
+      # Only the install prefix is cached. It is what both the skip check below and
+      # package-jniLibs.sh read, and it keeps the entry small enough to upload; caching
+      # all of native/out would include the git checkouts and object trees.
+      - name: Cache native prefix
+        uses: actions/cache@v4
+        with:
+          path: native/out/prefix
+          key: ffmpeg-${{ hashFiles('third_party/ffmpeg.lock', 'native/scripts/**') }}-ndk-28.2.13676358
+
+      - name: Detect built FFmpeg
+        id: ffmpeg_built
+        run: |
+          if [[ -f native/out/prefix/arm64-v8a/lib/libavformat.so && -f native/out/prefix/armeabi-v7a/lib/libavformat.so ]]; then
+            echo "ready=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "ready=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Install native build packages
+        if: steps.ffmpeg_built.outputs.ready != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake libtool pkg-config meson ninja-build nasm yasm git
+
+      - name: Build FFmpeg
+        if: steps.ffmpeg_built.outputs.ready != 'true'
+        run: ./native/scripts/build-ffmpeg.sh
+
+      - name: Package jniLibs and headers
+        run: ./native/scripts/package-jniLibs.sh
+
+      - name: Upload jniLibs
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-jniLibs
+          path: app/src/main/jniLibs
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload FFmpeg headers
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-headers
+          path: native/prebuilt
+          if-no-files-found: error
+          retention-days: 14
