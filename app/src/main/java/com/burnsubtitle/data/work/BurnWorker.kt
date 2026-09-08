@@ -33,6 +33,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.UUID
+import android.system.Os
 
 @HiltWorker
 class BurnWorker @AssistedInject constructor(
@@ -259,7 +260,27 @@ class BurnWorker @AssistedInject constructor(
             isAv1 = inputData.getBoolean(KEY_IS_AV1, false),
         )
     }
+private fun setupFontconfig(context: Context, fontsDirPath: String) {
+        val confDir = File(context.filesDir, "fontconfig")
+        confDir.mkdirs()
 
+        val confFile = File(confDir, "fonts.conf")
+        
+        // Write or overwrite the fonts.conf file to ensure it points to the correct directory
+        confFile.writeText("""
+            <?xml version="1.0"?>
+            <!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+            <fontconfig>
+                <dir>$fontsDirPath</dir>
+                <cachedir>${context.cacheDir.absolutePath}</cachedir>
+                <config></config>
+            </fontconfig>
+        """.trimIndent())
+
+        // Set the environment variables for the native FFmpeg C++ code to read
+        android.system.Os.setenv("FONTCONFIG_PATH", confDir.absolutePath, true)
+        android.system.Os.setenv("FONTCONFIG_FILE", confFile.absolutePath, true)
+    }
     companion object {
         private const val STOP_POLL_MS = 250L
         const val TAG = "burn-subtitle"
