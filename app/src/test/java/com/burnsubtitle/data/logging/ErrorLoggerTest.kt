@@ -10,12 +10,10 @@ import java.util.Locale
 
 class ErrorLoggerTest {
 
-    private val logger = ErrorLogger()
-
     @Test
     fun fileNameStartsWithPrefixAndFormattedDate() {
         val date = Date(1773000000000L)
-        val fileName = logger.generateFileName(date)
+        val fileName = ErrorLogger.generateFileName(date)
 
         assertTrue(fileName.startsWith("b-e-"))
         assertTrue(fileName.endsWith(".txt"))
@@ -34,7 +32,8 @@ class ErrorLoggerTest {
             "exitCode" to 64,
         )
 
-        val report = logger.buildErrorReportText(
+        val report = ErrorLogger.buildErrorReportText(
+            context = null,
             date = date,
             error = testException,
             tag = "Test Operation",

@@ -18,7 +18,7 @@ data class FolderSetting(
 
 @Singleton
 class AppPreferences @Inject constructor(
-    @param:ApplicationContext private val context: Context,
+    @ApplicationContext private val context: Context,
     private val safPermissions: SafUriPermissions,
     private val safQuery: SafDocumentQuery,
 ) {
